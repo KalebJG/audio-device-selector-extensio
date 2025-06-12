@@ -129,61 +129,108 @@ async function refreshDevices() {
     setLoading(true);
     showStatus('Loading audio devices...');
     showPermissionWarning(false);
+    showPermissionRequest(false);
     
     try {
-        // Request permission to access audio devices
+        // Check if we have permission already
+        let hasPermission = false;
+        
         try {
-            console.log('[AudioExt] Calling getUserMedia to prompt for mic permission');
+            if (navigator.permissions && navigator.permissions.query) {
+                const permissionStatus = await navigator.permissions.query({ name: 'microphone' });
+                hasPermission = permissionStatus.state === 'granted';
+                console.log('[AudioExt] Microphone permission status:', permissionStatus.state);
+                
+                // Listen for permission changes
+                permissionStatus.onchange = () => {
+                    console.log('[AudioExt] Permission status changed to:', permissionStatus.state);
+                    if (permissionStatus.state === 'granted') {
+                        refreshDevices();
+                    }
+                };
+            }
+        } catch (permError) {
+            console.warn('[AudioExt] Could not query permission status:', permError);
+        }
+        
+        // Request permission to access audio devices if needed
+        try {
+            console.log('[AudioExt] Calling getUserMedia to ensure mic permission');
             const stream = await navigator.mediaDevices.getUserMedia({ 
                 audio: true, 
                 video: false 
             });
             console.log('[AudioExt] getUserMedia success, stream id:', stream.id);
+            
             // Stop all tracks in the stream to release them
             stream.getTracks().forEach(track => track.stop());
             
-            // Hide permission UI if it was shown
-            showPermissionWarning(false);
-            showPermissionRequest(false);
+            // Permission granted
+            hasPermission = true;
         } catch (error) {
             if (error.name === 'NotAllowedError' || error.name === 'SecurityError') {
                 console.error('[AudioExt] Permission error:', error.name, error.message);
                 showPermissionWarning(true);
                 showPermissionRequest(true);
                 showError('Microphone access required to list audio devices');
+                setLoading(false);
+                return;
             } else {
                 console.error('[AudioExt] getUserMedia error:', error.name, error.message);
                 showError('Failed to access audio devices: ' + error.message);
+                setLoading(false);
+                return;
             }
-            setLoading(false);
-            return;
         }
         
-        try {
-            // Get all audio devices
-            console.log('[AudioExt] Calling enumerateDevices to list audio devices');
-            const deviceList = await navigator.mediaDevices.enumerateDevices();
-            console.log('[AudioExt] enumerateDevices returned', deviceList.length, 'devices');
-            deviceList.forEach(d => console.log('  kind:', d.kind, 'label:', d.label || '(no label)', 'id:', d.deviceId));
-            devices = deviceList.filter(device => 
-                device.kind === 'audioinput' || device.kind === 'audiooutput'
-            );
-            
-            // Populate input devices
-            const inputDevices = devices.filter(device => device.kind === 'audioinput');
-            populateDeviceSelect(inputDeviceSelect, inputDevices, 'Microphone');
-            
-            // Populate output devices
-            const outputDevices = devices.filter(device => device.kind === 'audiooutput');
-            populateDeviceSelect(outputDeviceSelect, outputDevices, 'Speakers');
-            
-            // Re-apply current selections if they exist
-            await loadSettings();
-            showStatus('');
-        } catch (error) {
-            console.error('Error enumerating devices:', error);
-            showError('Failed to list audio devices: ' + error.message);
+        // Get all audio devices
+        console.log('[AudioExt] Calling enumerateDevices to list audio devices');
+        const deviceList = await navigator.mediaDevices.enumerateDevices();
+        console.log('[AudioExt] enumerateDevices returned', deviceList.length, 'devices');
+        
+        // Log device details for debugging
+        deviceList.forEach(d => {
+            console.log(`Device: kind=${d.kind}, label=${d.label || '(no label)'}, id=${d.deviceId.substring(0, 8)}...`);
+        });
+        
+        // Filter for audio devices
+        devices = deviceList.filter(device => 
+            device.kind === 'audioinput' || device.kind === 'audiooutput'
+        );
+        
+        // Check if we have labeled devices
+        const hasLabels = devices.some(device => device.label && device.label.length > 0);
+        if (!hasLabels && hasPermission) {
+            console.warn('[AudioExt] No device labels despite having permission');
+            // This can happen in rare cases - try one more getUserMedia call
+            try {
+                const retryStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                retryStream.getTracks().forEach(track => track.stop());
+                
+                // Try enumerating devices again
+                const retryDeviceList = await navigator.mediaDevices.enumerateDevices();
+                devices = retryDeviceList.filter(device => 
+                    device.kind === 'audioinput' || device.kind === 'audiooutput'
+                );
+            } catch (retryError) {
+                console.error('[AudioExt] Retry getUserMedia failed:', retryError);
+            }
         }
+        
+        // Populate input devices
+        const inputDevices = devices.filter(device => device.kind === 'audioinput');
+        populateDeviceSelect(inputDeviceSelect, inputDevices, 'Microphone');
+        
+        // Populate output devices
+        const outputDevices = devices.filter(device => device.kind === 'audiooutput');
+        populateDeviceSelect(outputDeviceSelect, outputDevices, 'Speakers');
+        
+        // Re-apply current selections if they exist
+        await loadSettings();
+        showStatus('');
+    } catch (error) {
+        console.error('[AudioExt] Error refreshing devices:', error);
+        showError('Failed to list audio devices: ' + error.message);
     } finally {
         setLoading(false);
     }
