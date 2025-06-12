@@ -11,6 +11,9 @@ const resetBtn = document.getElementById('reset-devices');
 const statusMessage = document.createElement('div');
 statusMessage.className = 'status-message';
 document.querySelector('.container').appendChild(statusMessage);
+const permissionWarning = document.getElementById('permission-warning');
+const retryPermissionBtn = document.getElementById('retry-permission');
+const openSettingsBtn = document.getElementById('open-settings');
 
 // State
 let devices = [];
@@ -123,29 +126,33 @@ async function saveSettings() {
 async function refreshDevices() {
     setLoading(true);
     showStatus('Loading audio devices...');
+    showPermissionWarning(false);
     
     try {
         // Request permission to access audio devices
         try {
+            console.log('[AudioExt] Calling getUserMedia to prompt for mic permission');
             const stream = await navigator.mediaDevices.getUserMedia({ 
                 audio: true, 
                 video: false 
             });
+            console.log('[AudioExt] getUserMedia success, stream id:', stream.id);
             // Stop all tracks in the stream to release them
             stream.getTracks().forEach(track => track.stop());
         } catch (error) {
-            if (error.name === 'NotAllowedError') {
-                showError('Microphone access was denied. Please allow access to manage audio devices.');
-            } else {
-                showError('Failed to access audio devices: ' + error.message);
+            if (error.name === 'NotAllowedError' || error.name === 'SecurityError') {
+                showPermissionWarning(true);
             }
-            setLoading(false);
-            return;
+            console.error('[AudioExt] getUserMedia error:', error.name, error.message);
+            throw error;
         }
         
         try {
             // Get all audio devices
+            console.log('[AudioExt] Calling enumerateDevices to list audio devices');
             const deviceList = await navigator.mediaDevices.enumerateDevices();
+            console.log('[AudioExt] enumerateDevices returned', deviceList.length, 'devices');
+            deviceList.forEach(d => console.log('  kind:', d.kind, 'label:', d.label || '(no label)', 'id:', d.deviceId));
             devices = deviceList.filter(device => 
                 device.kind === 'audioinput' || device.kind === 'audiooutput'
             );
@@ -224,6 +231,14 @@ function setupEventListeners() {
     
     // Reset button
     resetBtn.addEventListener('click', resetToDefaults);
+    
+    retryPermissionBtn.addEventListener('click', refreshDevices);
+    openSettingsBtn.addEventListener('click', () => {
+        const extId = chrome.runtime.id;
+        chrome.tabs.create({
+            url: `chrome://settings/content/siteDetails?site=chrome-extension://${extId}`
+        });
+    });
 }
 
 // Play test sound on selected output device
@@ -413,4 +428,9 @@ function showFeedback(message) {
 function showError(message) {
     console.error('Error:', message);
     showStatus(message, true);
+}
+
+// Show permission warning to the user
+function showPermissionWarning(show = true) {
+    permissionWarning.classList.toggle('hidden', !show);
 }

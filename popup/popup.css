@@ -142,3 +142,21 @@ h2 {
     z-index: 1000;
     border-radius: 8px;
 }
+
+.hidden {
+    display: none;
+}
+
+#permission-warning {
+    margin-top: 12px;
+    padding: 10px;
+    border: 1px solid #ffcc00;
+    background: #fff8e1;
+    color: #795548;
+    border-radius: 4px;
+    text-align: center;
+}
+
+#permission-warning button {
+    margin: 6px;
+}

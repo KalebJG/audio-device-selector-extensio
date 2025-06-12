@@ -47,6 +47,12 @@
         <div class="section">
             <button id="reset-devices" class="button button-warning">Reset to Default Devices</button>
         </div>
+
+        <div id="permission-warning" class="hidden">
+            <p>Microphone access is blocked. Please allow permission in Chrome to list audio devices.</p>
+            <button id="retry-permission">Retry</button>
+            <button id="open-settings">Open Settings</button>
+        </div>
     </div>
     <script src="popup.js"></script>
 </body>
