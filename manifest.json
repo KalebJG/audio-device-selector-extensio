@@ -9,7 +9,8 @@
     "activeTab",
     "scripting",
     "tabs",
-    "webNavigation"
+    "webNavigation",
+    "audioCapture"
   ],
   "host_permissions": [
     "<all_urls>"
