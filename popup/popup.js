@@ -203,20 +203,41 @@ function populateDeviceSelect(selectElement, devices, defaultLabel) {
     defaultOption.textContent = `Default ${defaultLabel}`;
     selectElement.appendChild(defaultOption);
     
-    // Add available devices
-    devices.forEach(device => {
+    // Check if we have any devices
+    if (devices.length === 0) {
+        const option = document.createElement('option');
+        option.value = 'no-devices';
+        option.textContent = `No ${defaultLabel}s found`;
+        option.disabled = true;
+        selectElement.appendChild(option);
+        return;
+    }
+    
+    // Check if we have labels (permission granted)
+    const hasLabels = devices.some(device => device.label && device.label.length > 0);
+    
+    // Add each device as an option
+    devices.forEach((device, index) => {
         const option = document.createElement('option');
         option.value = device.deviceId;
-        option.textContent = device.label || `Unknown ${defaultLabel} (${device.deviceId.substring(0, 8)})`;
+        
+        // Use label if available, otherwise use generic name
+        if (device.label) {
+            option.textContent = device.label;
+        } else {
+            option.textContent = `${defaultLabel} ${index + 1}`;
+            // If we don't have labels, we need permission
+            if (index === 0 && !hasLabels) {
+                showPermissionRequest(true);
+            }
+        }
+        
         selectElement.appendChild(option);
     });
     
-    // Restore selection if it still exists
-    if (currentValue) {
-        const optionExists = Array.from(selectElement.options).some(opt => opt.value === currentValue);
-        if (optionExists) {
-            selectElement.value = currentValue;
-        }
+    // Restore selection if it exists
+    if (currentValue && devices.some(d => d.deviceId === currentValue)) {
+        selectElement.value = currentValue;
     }
 }
 
