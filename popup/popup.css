@@ -1,0 +1,144 @@
+body {
+    width: 300px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 0;
+    color: #333;
+    background-color: #f8f9fa;
+}
+
+.container {
+    padding: 16px;
+}
+
+header {
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e1e4e8;
+}
+
+h1 {
+    font-size: 16px;
+    margin: 0;
+    color: #1a73e8;
+}
+
+h2 {
+    font-size: 14px;
+    margin: 12px 0 8px 0;
+    color: #5f6368;
+}
+
+.section {
+    margin-bottom: 16px;
+    background: white;
+    padding: 12px;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.device-select {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 8px;
+    border: 1px solid #dadce0;
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+.volume-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.volume-control input[type="range"] {
+    flex-grow: 1;
+}
+
+.volume-control span {
+    min-width: 40px;
+    text-align: right;
+    font-size: 12px;
+    color: #5f6368;
+}
+
+.button {
+    width: 100%;
+    padding: 8px 12px;
+    margin: 4px 0;
+    background-color: #1a73e8;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background-color 0.2s;
+}
+
+.button:hover {
+    background-color: #1557b0;
+}
+
+.button:active {
+    background-color: #0d47a1;
+}
+
+.button-warning {
+    background-color: #f1f3f4;
+    color: #5f6368;
+    border: 1px solid #dadce0;
+}
+
+.button-warning:hover {
+    background-color: #e8eaed;
+}
+
+.button-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* Status message */
+.status-message {
+    margin-top: 12px;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.status-message.error {
+    background-color: #ffebee;
+    color: #c62828;
+    border: 1px solid #ffcdd2;
+}
+
+.status-message:not(.error) {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+    border: 1px solid #c8e6c9;
+}
+
+/* Loading state */
+.loading {
+    opacity: 0.7;
+    pointer-events: none;
+    position: relative;
+}
+
+.loading::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.7) url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 50 50"><path fill="%23333" d="M25,5A20,20,0,1,1,5,25,20,20,0,0,1,25,5m0-5A25,25,0,1,0,50,25,25,25,0,0,0,25,0Z"><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="1s" repeatCount="indefinite"/></path></svg>') no-repeat center;
+    background-size: 40px 40px;
+    z-index: 1000;
+    border-radius: 8px;
+}
