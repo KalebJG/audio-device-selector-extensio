@@ -14,6 +14,8 @@ document.querySelector('.container').appendChild(statusMessage);
 const permissionWarning = document.getElementById('permission-warning');
 const retryPermissionBtn = document.getElementById('retry-permission');
 const openSettingsBtn = document.getElementById('open-settings');
+const permissionRequest = document.getElementById('permission-request');
+const grantPermissionBtn = document.getElementById('grant-permission');
 
 // State
 let devices = [];
@@ -139,12 +141,22 @@ async function refreshDevices() {
             console.log('[AudioExt] getUserMedia success, stream id:', stream.id);
             // Stop all tracks in the stream to release them
             stream.getTracks().forEach(track => track.stop());
+            
+            // Hide permission UI if it was shown
+            showPermissionWarning(false);
+            showPermissionRequest(false);
         } catch (error) {
             if (error.name === 'NotAllowedError' || error.name === 'SecurityError') {
+                console.error('[AudioExt] Permission error:', error.name, error.message);
                 showPermissionWarning(true);
+                showPermissionRequest(true);
+                showError('Microphone access required to list audio devices');
+            } else {
+                console.error('[AudioExt] getUserMedia error:', error.name, error.message);
+                showError('Failed to access audio devices: ' + error.message);
             }
-            console.error('[AudioExt] getUserMedia error:', error.name, error.message);
-            throw error;
+            setLoading(false);
+            return;
         }
         
         try {
@@ -239,6 +251,25 @@ function setupEventListeners() {
             url: `chrome://settings/content/siteDetails?site=chrome-extension://${extId}`
         });
     });
+    
+    // Grant permission button
+    grantPermissionBtn.addEventListener('click', requestMicrophonePermission);
+    
+    // Check if we have permission already
+    if (navigator.permissions && navigator.permissions.query) {
+        try {
+            navigator.permissions.query({ name: 'microphone' })
+                .then(permissionStatus => {
+                    console.log('[AudioExt] Initial permission status:', permissionStatus.state);
+                    if (permissionStatus.state === 'denied') {
+                        showPermissionRequest(true);
+                    }
+                })
+                .catch(err => console.warn('[AudioExt] Could not query permission status:', err));
+        } catch (e) {
+            console.warn('[AudioExt] Could not query permission status:', e);
+        }
+    }
 }
 
 // Play test sound on selected output device
@@ -433,4 +464,33 @@ function showError(message) {
 // Show permission warning to the user
 function showPermissionWarning(show = true) {
     permissionWarning.classList.toggle('hidden', !show);
+}
+
+// Show permission request UI
+function showPermissionRequest(show = true) {
+    permissionRequest.classList.toggle('hidden', !show);
+}
+
+// Request microphone permission explicitly
+async function requestMicrophonePermission() {
+    showStatus('Requesting microphone permission...');
+    setLoading(true);
+    
+    try {
+        console.log('[AudioExt] Explicitly requesting microphone permission');
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        console.log('[AudioExt] Permission granted!');
+        stream.getTracks().forEach(track => track.stop());
+        
+        // Hide permission UI
+        showPermissionRequest(false);
+        showPermissionWarning(false);
+        
+        // Refresh devices now that we have permission
+        await refreshDevices();
+    } catch (error) {
+        console.error('[AudioExt] Permission request failed:', error.name, error.message);
+        showError('Could not get microphone permission: ' + error.message);
+        setLoading(false);
+    }
 }
